@@ -18,4 +18,4 @@ jobs:
       - name: Python evaluation tests
         run: python3 -m unittest discover -s tools -p 'test_*.py' -v
       - name: Compile Python source (no model inference)
-        run: python3 -m py_compile tools/recognition_worker.py tools/worker_protocol.py tools/evaluate_policy.py tools/opencv_worker.py
+        run: python3 -m py_compile tools/recognition_worker.py tools/worker_protocol.py tools/evaluate_policy.py tools/opencv_worker.py tools/model_preflight.py
