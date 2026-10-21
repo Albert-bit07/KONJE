@@ -1,0 +1,21 @@
+name: linux-core-tests
+on:
+  push:
+  pull_request:
+jobs:
+  core:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libssl-dev libsqlite3-dev
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Test C++ and simulated interaction
+        run: ctest --test-dir build --output-on-failure
+      - name: Python evaluation tests
+        run: python3 -m unittest discover -s tools -p 'test_*.py' -v
+      - name: Compile Python source (no model inference)
+        run: python3 -m py_compile tools/recognition_worker.py tools/worker_protocol.py tools/evaluate_policy.py

@@ -1,0 +1,8 @@
+{
+  "status": "EXPERIMENTAL_NOT_CALIBRATED",
+  "minimum_cosine_similarity": 0.60,
+  "minimum_margin_over_runner_up": 0.10,
+  "single_face_required": true,
+  "enrollment_consent_required": true,
+  "comment": "Illustration of current environment-variable policy. Tune from real volunteer and unknown-person evaluation before trusted use. This JSON is documentation only, not loaded by the executable."
+}
