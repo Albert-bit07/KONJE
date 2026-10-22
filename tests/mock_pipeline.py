@@ -78,14 +78,20 @@ def main() -> int:
         p.stdin.flush()
         # Wait for the terminal outcome before issuing q; q cancels an active request.
         import select
+        # Read from the OS fd directly: TextIO buffering can cause select() to
+        # report no readable fd while completed lines remain in its buffer.
         observed = ""
         deadline = time.monotonic() + 25
         while time.monotonic() < deadline:
-            ready, _, _ = select.select([p.stdout], [], [], 0.2)
+            ready, _, _ = select.select([p.stdout.fileno()], [], [], 0.2)
             if ready:
-                observed += p.stdout.readline()
-                if "recognized" in observed or "uncertain" in observed or "unavailable" in observed:
+                chunk = os.read(p.stdout.fileno(), 4096)
+                if not chunk:
                     break
+                observed += chunk.decode("utf-8", errors="replace")
+                if any(token in observed for token in ("recognized", "uncertain", "unavailable")):
+                    break
+        assert any(token in observed for token in ("recognized", "uncertain", "unavailable")), observed
         stdout, stderr = p.communicate("q\n", timeout=10)
         stdout = observed + stdout
         assert p.returncode == 0, (stdout, stderr)
@@ -101,15 +107,18 @@ def main() -> int:
         assert p.stdin
         p.stdin.write("\n")
         p.stdin.flush()
-        import select
         observed = ""
         deadline = time.monotonic() + 25
         while time.monotonic() < deadline:
-            ready, _, _ = select.select([p.stdout], [], [], 0.2)
+            ready, _, _ = select.select([p.stdout.fileno()], [], [], 0.2)
             if ready:
-                observed += p.stdout.readline()
+                chunk = os.read(p.stdout.fileno(), 4096)
+                if not chunk:
+                    break
+                observed += chunk.decode("utf-8", errors="replace")
                 if "uncertain" in observed:
                     break
+        assert "uncertain" in observed, observed
         stdout, stderr = p.communicate("q\n", timeout=10)
         stdout = observed + stdout
         assert "uncertain" in stdout and not speech_log.exists(), (stdout, stderr)
