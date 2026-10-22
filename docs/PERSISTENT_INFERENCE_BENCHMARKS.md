@@ -81,3 +81,9 @@ These statistics are **not a validated safety guarantee**, especially for correl
 ## Still required on Pi
 
 Actual weight licensing/provisioning, repeatable CPU p50/p95/p99 and RSS measurement, cold-vs-warm comparison, camera/speaker and power-cycle behavior, model restart after crash, sustained multi-hour soak testing, measured false-accept rate on independent consenting people, and revocation tests during active speech.
+
+### Optional real-public-figure research run (GitHub Actions)
+
+The opt-in research workflow `.github/workflows/research-faces.yml` downloads checksum-pinned **LFW funneled** images into the ephemeral GitHub runner. The SHA-256 digest is the exact scikit-learn upstream LFW funneled archive checksum. It anonymizes image identity labels internally, uses disjoint unknown-person development and holdout groups, and reports aggregates by blur; it does not print identities, upload JPEGs, or upload embeddings. It is triggered by changes to that workflow or via manual `workflow_dispatch`, not by every application commit. Model weights are also checksum-pinned. If the source server is inaccessible, the job fails without claiming a benchmark result.
+
+LFW images contain varying natural viewpoints but no ground-truth pose annotations in this workflow; all `pose` fields remain `unspecified`. For **verified frontal/profile conditions**, an appropriately licensed dataset with explicit pose annotations (such as CFP-FP) or consenting volunteers must be supplied separately.

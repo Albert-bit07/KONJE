@@ -1,0 +1,59 @@
+name: labeled-face-research-benchmark
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/research-faces.yml"
+      - "tools/benchmark_faces.py"
+      - "tools/prepare_lfw_manifest.py"
+      - "tools/opencv_worker.py"
+
+permissions:
+  contents: read
+
+jobs:
+  lfw-yunet-sface:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install isolated OpenCV research runtime
+        run: |
+          python3 -m venv "$RUNNER_TEMP/konje-cv"
+          "$RUNNER_TEMP/konje-cv/bin/python" -m pip install --disable-pip-version-check \
+            "numpy==1.26.4" "opencv-python-headless==4.10.0.84"
+      - name: Download checksum-pinned model weights for research only
+        run: |
+          "$RUNNER_TEMP/konje-cv/bin/python" tools/provision_models.py \
+            --download --models-dir "$RUNNER_TEMP/konje-models" \
+            --env-file "$RUNNER_TEMP/konje-model.env"
+      - name: Obtain original LFW funneled research set with checksum verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/lfw"
+          curl --fail --location --silent --show-error --retry 3 --max-time 240 \
+            "https://ndownloader.figshare.com/files/5976015" \
+            --output "$RUNNER_TEMP/lfw/lfw-funneled.tgz"
+          echo "b47c8422c8cded889dc5a13418c4bc2abbda121092b3533a83306f90d900100a  $RUNNER_TEMP/lfw/lfw-funneled.tgz" | sha256sum --check --status
+          tar -xz --no-same-owner --no-same-permissions -C "$RUNNER_TEMP/lfw" -f "$RUNNER_TEMP/lfw/lfw-funneled.tgz"
+      - name: Prepare anonymous enrollment, calibration, and holdout splits
+        run: |
+          "$RUNNER_TEMP/konje-cv/bin/python" tools/prepare_lfw_manifest.py \
+            --images-dir "$RUNNER_TEMP/lfw/lfw_funneled" \
+            --out "$RUNNER_TEMP/lfw/manifest.csv" --known 12 --unknown-per-split 12
+      - name: Evaluate multiple celebrities, viewpoints present in LFW, and synthetic blur
+        shell: bash
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/konje-model.env"
+          "$RUNNER_TEMP/konje-cv/bin/python" tools/benchmark_faces.py \
+            --manifest "$RUNNER_TEMP/lfw/manifest.csv" \
+            --out "$RUNNER_TEMP/lfw/aggregates.json"
+          cat "$RUNNER_TEMP/lfw/aggregates.json"
+      - name: Interpretation boundaries
+        run: |
+          echo "EXPLORATORY RESEARCH: No person names/images/embeddings are uploaded."
+          echo "LFW lacks verified pose/session labels; synthetic blur is not motion blur."
+          echo "This result is not evidence for clinical, caregiver, or Pi camera use."
