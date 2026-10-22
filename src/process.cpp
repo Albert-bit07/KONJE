@@ -50,9 +50,14 @@ ProcessResult run_process(const std::vector<std::string>& argv,
         return result;
     }
     int pipes[2];
-    if (pipe2(pipes, O_CLOEXEC | O_NONBLOCK) != 0) throw std::runtime_error("pipe failed");
+    // The parent reads nonblocking, but the child's stdout MUST stay blocking.
+    // Making both pipe ends nonblocking loses larger JPEG/model outputs with EAGAIN.
+    if (pipe2(pipes, O_CLOEXEC) != 0) throw std::runtime_error("pipe failed");
     Fd read_end(pipes[0]);
     Fd write_end(pipes[1]);
+    const int flags = fcntl(read_end.value, F_GETFL);
+    if (flags < 0 || fcntl(read_end.value, F_SETFL, flags | O_NONBLOCK) < 0)
+        throw std::runtime_error("cannot configure nonblocking parent pipe");
     // Linux anonymous in-memory file: no JPEGs, embeddings or speech text on disk.
     Fd input_fd(memfd_create("konje-child-input", MFD_CLOEXEC));
     if (input_fd.value < 0) throw std::runtime_error("memfd creation failed");
@@ -108,6 +113,7 @@ ProcessResult run_process(const std::vector<std::string>& argv,
             if (n > 0) {
                 if (static_cast<std::size_t>(n) > max_output - result.output.size()) {
                     result.timed_out = true; // Hard output-size limit.
+                    kill(-pid, SIGKILL); // Stop descendants even if the wrapper already exited.
                     if (!child_exited) terminate(pid, status);
                     child_exited = true;
                     break;
