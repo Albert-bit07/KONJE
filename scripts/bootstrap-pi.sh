@@ -60,6 +60,7 @@ if [[ -r "$envfile" ]]; then
     source "$envfile"
     echo "Running pinned-model synthetic inference smoke..."
     python3 tools/model_smoke.py
+    python3 tools/synthetic_worker_smoke.py
 else
     echo "[PENDING] Verified model environment not installed; use --download-models after license review."
 fi
