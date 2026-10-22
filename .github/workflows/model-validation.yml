@@ -33,3 +33,29 @@ jobs:
           "$RUNNER_TEMP/konje-cv/bin/python" tools/synthetic_worker_smoke.py
       - name: Note model limitations
         run: echo "This validates ONNX load and synthetic forward passes on x86-64; no face recognition accuracy or ARM64 latency was tested."
+
+  real-onnx-synthetic-arm64:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm native ARM64
+        run: test "$(uname -m)" = "aarch64"
+      - name: Install OpenCV 4.10 isolated ARM64 inference runtime
+        run: |
+          sudo apt-get update && sudo apt-get install -y python3-venv
+          python3 -m venv "$RUNNER_TEMP/konje-cv"
+          "$RUNNER_TEMP/konje-cv/bin/python" -m pip install --disable-pip-version-check "numpy==1.26.4" "opencv-python-headless==4.10.0.84"
+      - name: Download reviewed exact-checksum research models
+        run: |
+          "$RUNNER_TEMP/konje-cv/bin/python" tools/provision_models.py --download --models-dir "$RUNNER_TEMP/konje-models" --env-file "$RUNNER_TEMP/konje-model.env"
+      - name: Execute detector and recognizer on synthetic blank arrays
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/konje-model.env"
+          "$RUNNER_TEMP/konje-cv/bin/python" tools/model_smoke.py
+          "$RUNNER_TEMP/konje-cv/bin/python" tools/synthetic_worker_smoke.py
+      - name: Note model limitations
+        run: echo "This validates ONNX load and synthetic forward passes on x86-64; no face recognition accuracy or ARM64 latency was tested."
