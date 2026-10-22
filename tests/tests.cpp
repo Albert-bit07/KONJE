@@ -71,9 +71,13 @@ void encrypted_store_tests() {
         store.put(sample);
         auto loaded = store.list();
         must(loaded.size() == 1 && loaded[0].introduction == sample.introduction, "encrypted roundtrip");
+        must(loaded[0].model_id == "test-model-v1", "embedding model identity survives encrypted roundtrip");
         sample.introduction = "Approved updated introduction.";
         store.put(sample);
         must(store.list()[0].introduction == sample.introduction, "update");
+        auto invalid_model = sample;
+        invalid_model.model_id.clear();
+        rejects([&] { store.put(invalid_model); });
     }
     {
         std::ifstream f(db, std::ios::binary);
@@ -105,6 +109,18 @@ void subprocess_tests() {
     must(bounded.timed_out && bounded.output.size() <= 64, "output must be bounded");
     const auto cancelled = konje::run_process({"sleep", "2"}, 3000ms, [] { return false; });
     must(cancelled.cancelled, "pre-start cancel");
+    std::atomic<bool> keep_running{true};
+    std::thread canceller([&] {
+        std::this_thread::sleep_for(75ms);
+        keep_running.store(false);
+    });
+    const auto started = std::chrono::steady_clock::now();
+    const auto stopped = konje::run_process({"sleep", "5"}, 3000ms,
+                                             [&] { return keep_running.load(); });
+    canceller.join();
+    const auto elapsed = std::chrono::steady_clock::now() - started;
+    must(stopped.cancelled && !stopped.timed_out, "in-flight subprocess cancelled");
+    must(elapsed < 2s, "cancellation must stop child promptly");
 }
 void scheduler_tests() {
     std::mutex mu;
