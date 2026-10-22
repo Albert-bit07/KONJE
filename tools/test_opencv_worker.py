@@ -19,14 +19,25 @@ class WorkerTests(unittest.TestCase):
             self.assertEqual(opencv_worker.run(io.BytesIO(b"junk"), output), 0)
             self.assertEqual(output.getvalue(), "UNCERTAIN\n")
 
-    def test_only_provisioned_onnx_models(self):
+    def test_only_hash_pinned_onnx_models(self):
+        import hashlib
+        from model_identity import fingerprint
         with tempfile.TemporaryDirectory() as temp:
             a = Path(temp) / "a.onnx"
             b = Path(temp) / "b.onnx"
-            a.write_bytes(b"placeholder")
-            self.assertIsNone(opencv_worker.model_paths({"KONJE_YUNET_MODEL": str(a), "KONJE_SFACE_MODEL": str(b)}))
-            b.write_bytes(b"placeholder")
-            self.assertEqual(opencv_worker.model_paths({"KONJE_YUNET_MODEL": str(a), "KONJE_SFACE_MODEL": str(b)}), (a, b))
+            a.write_bytes(b"detector")
+            b.write_bytes(b"recognizer")
+            env = {
+                "KONJE_YUNET_MODEL": str(a),
+                "KONJE_SFACE_MODEL": str(b),
+                "KONJE_YUNET_SHA256": hashlib.sha256(a.read_bytes()).hexdigest(),
+                "KONJE_SFACE_SHA256": hashlib.sha256(b.read_bytes()).hexdigest(),
+                "KONJE_MODEL_ID": fingerprint(a, b),
+            }
+            self.assertEqual(opencv_worker.model_paths(env), (a, b))
+            b.write_bytes(b"altered")
+            self.assertIsNone(opencv_worker.model_paths(env))
+
 
     def test_corrupt_envelope_is_uncertain(self):
         with patch.object(opencv_worker, "model_paths", return_value=("a.onnx", "b.onnx")):
