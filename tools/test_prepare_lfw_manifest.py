@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from prepare_lfw_manifest import select_people, write_manifest
 from benchmark_faces import load_manifest
@@ -17,6 +18,14 @@ class LFWManifestTests(unittest.TestCase):
                     (folder/f'photo_{n:02d}.jpg').write_bytes(b'example')
             rows=select_people(src,known=3,unknown_per_split=2)
             self.assertEqual(rows,select_people(src,known=3,unknown_per_split=2))
+            original_iterdir = Path.iterdir
+            def reversed_iterdir(path):
+                items = list(original_iterdir(path))
+                if path == src:
+                    items.reverse()
+                return iter(items)
+            with patch.object(Path, "iterdir", reversed_iterdir):
+                self.assertEqual(rows,select_people(src,known=3,unknown_per_split=2))
             manifest=root/'private'/'manifest.csv'
             write_manifest(rows,manifest)
             parsed=load_manifest(manifest)
