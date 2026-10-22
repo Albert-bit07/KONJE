@@ -54,6 +54,7 @@ def main() -> int:
         env.update({
             "HOME": str(root),
             "KONJE_WORKER_PATH": str(worker),
+            "KONJE_MODEL_ID": "mock-model-v1",
             "KONJE_CAMERA": "rpicam",
             "KONJE_SPEECH": "on",
             "KONJE_MOCK_SPEECH_LOG": str(speech_log),
