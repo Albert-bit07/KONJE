@@ -49,5 +49,27 @@ class WorkerTests(unittest.TestCase):
             self.assertEqual(output.getvalue(), "UNCERTAIN\n")
 
 
+    def test_ambiguous_frame_rejects_entire_burst(self):
+        """Never identify from a later single-face frame after seeing two faces."""
+        from unittest.mock import MagicMock
+        import numpy as np
+
+        fake_cv2 = MagicMock()
+        fake_cv2.IMREAD_COLOR = 1
+        image = np.zeros((120, 120, 3), dtype=np.uint8)
+        fake_cv2.imdecode.return_value = image
+        detector = fake_cv2.FaceDetectorYN.create.return_value
+        # A face row is (x, y, width, height, landmarks..., score).
+        detector.detect.side_effect = [
+            (None, np.zeros((2, 15), dtype=np.float32)),
+            (None, np.zeros((1, 15), dtype=np.float32)),
+        ]
+        frames = [b"first", b"second"]
+        with patch.dict(sys.modules, {"cv2": fake_cv2}):
+            self.assertIsNone(opencv_worker.extract(frames, "detector.onnx", "recognizer.onnx"))
+        self.assertEqual(detector.detect.call_count, 1)
+        fake_cv2.FaceRecognizerSF.create.return_value.feature.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
