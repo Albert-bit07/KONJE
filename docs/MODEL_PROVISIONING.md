@@ -43,3 +43,22 @@ bash scripts/validate-pi.sh --diagnostics
 ```
 
 The normal bootstrap builds and tests the C++ application and installs supported OpenCV CPU bindings. The `--download-models` option **must be explicitly chosen**. No command auto-enrolls people, creates encryption keys, captures camera images, or asserts identity accuracy.
+## Offline threshold calibration (after Pi capture and consent)
+
+The repository includes a **model-scoped experimental evaluator**, not a production-ready threshold. Do not use the hard-coded cosine threshold to announce real identities without measuring false accepts and false rejects. Keep identifying information, image buffers, and embeddings outside GitHub. Generate two de-identified CSV files for disjoint capture **sessions**:
+
+```text
+truth_id,best_id,best_similarity,second_similarity
+a,a,0.88,0.21
+,b,0.39,0.12
+```
+
+An empty `truth_id` means an unknown person. An empty `best_id` means the worker declined to choose a candidate. `-2` is the existing C++ no-runner-up sentinel. The columns record actual measured similarity scores; do not fabricate them.
+
+```bash
+source "$HOME/.config/konje/model.env"
+python3 tools/calibrate_policy.py /private/dev-scores.csv /private/holdout-scores.csv \
+  --model-id "$KONJE_MODEL_ID" --max-wrong-accepts 0 --out /private/calibration-report.json
+```
+
+The tool chooses on the development split only, evaluates once on independent holdout data, and reports a Wilson 95% upper bound under independent-binomial assumptions. Small samples, correlated attempts, leakage across sessions, and unsafe model licenses can make these estimates misleading. This tool **never** edits the runtime policy or enrolled profiles; manual review and actual device testing are required. 
