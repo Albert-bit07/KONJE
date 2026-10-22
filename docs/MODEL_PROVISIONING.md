@@ -28,7 +28,7 @@ source "$HOME/.config/konje/model.env"
 python3 tools/model_preflight.py
 ```
 
-**The model fingerprint ties weights to the declared preprocessing protocol version but is not a code-signature or code-integrity attestation.** To validate performance on the target Pi, the final stage requires consented local test images and measured false matches/abstentions. Do not use the generated example `.env` or these model hashes as evidence that real-world accuracy is adequate.
+**The model fingerprint now binds the exact reviewed `tools/opencv_worker.py` source bytes, detector and recognizer weight digests, and pipeline protocol version. Editing the worker—even its comments—invalidates earlier model IDs, so any enrolled identities must be re-enrolled after the model configuration is deliberately regenerated. This remains a consistency check, not a code-signature or runtime attestation.** To validate performance on the target Pi, the final stage requires consented local test images and measured false matches/abstentions. Do not use the generated example `.env` or these model hashes as evidence that real-world accuracy is adequate.
 
 ## Raspberry Pi 5 bootstrap
 
