@@ -35,6 +35,10 @@ class WorkerTests(unittest.TestCase):
                 "KONJE_MODEL_ID": fingerprint(a, b),
             }
             self.assertEqual(opencv_worker.model_paths(env), (a, b))
+            import model_identity
+            with patch.object(model_identity, "worker_source_sha256", return_value="0" * 64):
+                self.assertIsNone(opencv_worker.model_paths(env),
+                                  "Changed preprocessing source must invalidate enrollment")
             b.write_bytes(b"altered")
             self.assertIsNone(opencv_worker.model_paths(env))
 
