@@ -24,7 +24,7 @@ class BurstProtocolTests(unittest.TestCase):
 
     def test_deterministic_malformed_input_corpus(self):
         randomizer = random.Random(20261022)
-        frames = [b'\\xff\\xd8' + b'x' * 32 + b'\\xff\\xd9']
+        frames = [b'\xff\xd8' + b'x' * 32 + b'\xff\xd9']
         good = encode(frames)
         for index in range(256):
             raw = bytearray(good)
@@ -42,9 +42,9 @@ class BurstProtocolTests(unittest.TestCase):
                     read_burst(bytes(raw))
 
     def test_maximum_declared_length_never_overreads(self):
-        header = b'KONJE1\\x01' + (4 * 1024 * 1024).to_bytes(4, 'little')
+        header = b'KONJE1\x01' + (4 * 1024 * 1024).to_bytes(4, 'little')
         with self.assertRaises(ValueError):
-            read_burst(header + b'\\xff\\xd8\\xff\\xd9')
+            read_burst(header + b'\xff\xd8\xff\xd9')
 
 
 if __name__ == '__main__':
