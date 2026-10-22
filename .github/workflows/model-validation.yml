@@ -1,0 +1,28 @@
+name: model-weights-smoke
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/model-validation.yml"
+      - "tools/model_smoke.py"
+      - "tools/provision_models.py"
+      - "tools/model_identity.py"
+jobs:
+  real-onnx-synthetic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Debian/Ubuntu OpenCV CPU bindings
+        run: sudo apt-get update && sudo apt-get install -y python3-opencv python3-numpy
+      - name: Download reviewed exact-checksum research models
+        run: /usr/bin/python3 tools/provision_models.py --download --models-dir "$RUNNER_TEMP/konje-models" --env-file "$RUNNER_TEMP/konje-model.env"
+      - name: Execute detector and recognizer on synthetic blank arrays
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/konje-model.env"
+          /usr/bin/python3 tools/model_smoke.py
+      - name: Note model limitations
+        run: echo "This validates ONNX load and synthetic forward passes on x86-64; no face recognition accuracy or ARM64 latency was tested."
