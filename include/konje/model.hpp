@@ -11,10 +11,12 @@ struct Profile {
     std::string relationship;
     std::string introduction;    // Explicitly approved speech, never generated.
     std::vector<float> embedding;
+    std::string model_id;       // Explicit embedding-space identifier; never infer from dimensions.
 };
 
 struct MatchPolicy {
     float minimum_similarity{0.60F}; // Experimental only; must be evaluated.
+    std::string model_id;       // Empty identifier disables positive identification.
     float minimum_margin{0.10F};     // Gap to second-best candidate.
 };
 
