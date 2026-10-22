@@ -5,6 +5,8 @@ on:
     paths:
       - ".github/workflows/model-validation.yml"
       - "tools/model_smoke.py"
+      - "tools/synthetic_worker_smoke.py"
+      - "tools/opencv_worker.py"
       - "tools/provision_models.py"
       - "tools/model_identity.py"
 jobs:
@@ -28,5 +30,6 @@ jobs:
           set -euo pipefail
           source "$RUNNER_TEMP/konje-model.env"
           "$RUNNER_TEMP/konje-cv/bin/python" tools/model_smoke.py
+          "$RUNNER_TEMP/konje-cv/bin/python" tools/synthetic_worker_smoke.py
       - name: Note model limitations
         run: echo "This validates ONNX load and synthetic forward passes on x86-64; no face recognition accuracy or ARM64 latency was tested."
