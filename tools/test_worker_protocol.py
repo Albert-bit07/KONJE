@@ -1,4 +1,5 @@
 import unittest
+import random
 from worker_protocol import read_burst
 
 
@@ -20,6 +21,30 @@ class BurstProtocolTests(unittest.TestCase):
             with self.subTest(bad=bad[:20]):
                 with self.assertRaises(ValueError):
                     read_burst(bad)
+
+    def test_deterministic_malformed_input_corpus(self):
+        randomizer = random.Random(20261022)
+        frames = [b'\\xff\\xd8' + b'x' * 32 + b'\\xff\\xd9']
+        good = encode(frames)
+        for index in range(256):
+            raw = bytearray(good)
+            operation = index % 4
+            if operation == 0:
+                raw = raw[:randomizer.randrange(len(raw))]
+            elif operation == 1:
+                raw.extend(bytes([randomizer.randrange(256)]))
+            elif operation == 2:
+                raw[6] = 0 if (index // 4) % 2 == 0 else 4
+            else:
+                raw[7:11] = (0xffffffff).to_bytes(4, 'little')
+            with self.subTest(index=index):
+                with self.assertRaises(ValueError):
+                    read_burst(bytes(raw))
+
+    def test_maximum_declared_length_never_overreads(self):
+        header = b'KONJE1\\x01' + (4 * 1024 * 1024).to_bytes(4, 'little')
+        with self.assertRaises(ValueError):
+            read_burst(header + b'\\xff\\xd8\\xff\\xd9')
 
 
 if __name__ == '__main__':
