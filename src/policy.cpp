@@ -25,6 +25,7 @@ MatchResult decide_match(const std::vector<float>& candidate,
                          const std::vector<Profile>& enrolled,
                          MatchPolicy policy) {
     if (candidate.empty()) return {"", "no usable embedding"};
+    if (policy.model_id.empty()) return {"", "embedding model not configured"};
     if (!(policy.minimum_similarity >= -1.0F && policy.minimum_similarity <= 1.0F) ||
         !(policy.minimum_margin >= 0.0F && policy.minimum_margin <= 2.0F)) {
         throw std::invalid_argument("invalid recognition policy settings");
@@ -35,6 +36,7 @@ MatchResult decide_match(const std::vector<float>& candidate,
     std::unordered_set<std::string> ids;
     for (const Profile& item : enrolled) {
         if (item.id.empty() || !ids.insert(item.id).second) return {"", "ambiguous directory"};
+        if (item.model_id != policy.model_id) return {"", "incompatible enrolled embedding model"};
         const float score = similarity(candidate, item.embedding);
         if (score > best) {
             second = best;
