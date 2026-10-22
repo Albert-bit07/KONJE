@@ -38,14 +38,20 @@ struct TempDir {
     ~TempDir() { std::filesystem::remove_all(path); }
 };
 void policy_tests() {
-    const konje::Profile a{"opaque_a", "Sample A", "friend", "Approved A", {1, 0, 0}};
-    const konje::Profile b{"opaque_b", "Sample B", "friend", "Approved B", {0, 1, 0}};
-    const auto rule = konje::MatchPolicy{.minimum_similarity = 0.6F, .minimum_margin = 0.10F};
+    const konje::Profile a{"opaque_a", "Sample A", "friend", "Approved A", {1, 0, 0}, "test-model-v1"};
+    const konje::Profile b{"opaque_b", "Sample B", "friend", "Approved B", {0, 1, 0}, "test-model-v1"};
+    const auto rule = konje::MatchPolicy{.minimum_similarity = 0.6F, .model_id = "test-model-v1", .minimum_margin = 0.10F};
     must(konje::decide_match({1, 0, 0}, {a, b}, rule).id == "opaque_a", "expected match");
+    auto mismatch = b;
+    mismatch.model_id = "other-model";
+    must(konje::decide_match({1, 0, 0}, {a, mismatch}, rule).id.empty(), "mixed embedding models must fail closed");
+    auto no_model = rule;
+    no_model.model_id.clear();
+    must(konje::decide_match({1, 0, 0}, {a, b}, no_model).id.empty(), "missing model id must fail closed");
     must(konje::decide_match({0, 0, 0}, {a, b}, rule).id.empty(), "zero vector must be uncertain");
     must(konje::decide_match({0, 0, 1}, {a, b}, rule).id.empty(), "unknown must be uncertain");
     must(konje::decide_match({1, 0, 0}, {a, a}, rule).id.empty(), "duplicate identity must be uncertain");
-    const konje::Profile close{"opaque_c", "C", "friend", "Approved", {0.99F, 0.1F, 0}};
+    const konje::Profile close{"opaque_c", "C", "friend", "Approved", {0.99F, 0.1F, 0}, "test-model-v1"};
     must(konje::decide_match({1, 0, 0}, {a, close}, rule).id.empty(), "near-tie must be uncertain");
     must(konje::decide_match({std::numeric_limits<float>::quiet_NaN()}, {a}, rule).id.empty(), "NaN fail closed");
     rejects([&] { konje::decide_match({1}, {a}, {.minimum_similarity = 2, .minimum_margin = 0}); });
@@ -59,7 +65,7 @@ void encrypted_store_tests() {
     rejects([&] { konje::ProfileStore missing(db, key); });
     konje::create_key_file(key);
     rejects([&] { konje::create_key_file(key); });
-    konje::Profile sample{"person_1", "Volunteer One", "friend", "Hello, this is Volunteer One.", {1, 0}};
+    konje::Profile sample{"person_1", "Volunteer One", "friend", "Hello, this is Volunteer One.", {1, 0}, "test-model-v1"};
     {
         konje::ProfileStore store(db, key);
         store.put(sample);
