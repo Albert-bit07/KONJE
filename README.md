@@ -16,9 +16,10 @@ A single C++20 executable with modular components for bounded on-request camera 
 |---|---|
 | Raspberry Pi 5 (8 GB), Debian 13, SSH, GCC/CMake/Ninja | Verified by user in Pi terminal |
 | Earlier, minimal `main.cpp` on Pi | Built and executed by user |
-| **This expanded repository** C++ build + unit tests | Validated on Linux x86-64 in assistant environment |
+| **This expanded repository** C++20 builds and simulated tests | Verified on GitHub Actions Linux x86-64 and native ARM64 hosted runners |
 | Mocked capture → embedding → encrypted match → approved speech → revocation | Software simulation passed, no real images/audio |
-| Expanded app built on Pi / real camera / real speaker / real model | **Not verified** |
+| Reviewed exact-weight YuNet + SFace runtime and synthetic JPEG worker | Passed hosted OpenCV 4.10 x86-64 and ARM64 model smoke; **not a Pi measurement** |
+| Expanded app built on actual Pi / real camera / real speaker | **Not verified** |
 | Latency, identification error rates, privacy efficacy, clinical benefit | **Not measured** |
 
 ## Linux/Pi build
@@ -32,6 +33,20 @@ ctest --test-dir build --output-on-failure
 ```
 
 `setup-pi.sh` installs `build-essential cmake ninja-build git pkg-config libssl-dev libsqlite3-dev python3 python3-venv`. Enable camera/audio utilities separately once the hardware is available.
+
+## Pi-ready bootstrap (recommended current path)
+
+The source, model-integrity tooling, C++ application and integration tests are designed for one-time deployment on Debian 13 ARM64. They have **not** been installed on the actual Pi yet. To run the full software checks on the Pi after cloning this private repository:
+
+```bash
+cd ~/KONJE
+bash scripts/bootstrap-pi.sh
+bash scripts/validate-pi.sh --diagnostics
+```
+
+After reviewing the exact YuNet/SFace model terms, explicitly provision the pinned **evaluation** weights with `bash scripts/bootstrap-pi.sh --download-models`. This writes owner-only local model configuration; it never commits weights or volunteer data. The bootstrap verifies actual OpenCV APIs and synthetic inference. See [model provisioning](docs/MODEL_PROVISIONING.md), [model evaluation](docs/OPENCV_MODEL_CANDIDATE.md), and [engineering audit](docs/ENGINEERING_AUDIT_2026-10-21.md).
+
+**CI evidence:** [native x86-64 and ARM64 C++/simulated tests](https://github.com/Albert-bit07/KONJE/actions/runs/39721906740) and [native x86-64 and ARM64 verified-weight synthetic model tests](https://github.com/Albert-bit07/KONJE/actions/runs/39721635133). No face-identification accuracy is claimed. Consent-based enrollment, holdout calibration, on-device performance and camera/speaker testing are separate gates.
 
 ## Safe first run (no camera yet)
 
