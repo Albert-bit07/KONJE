@@ -1,31 +1,33 @@
 #!/usr/bin/env python3
-"""Local, single-shot YuNet/SFace embedding worker for KONJE1 JPEG bursts.
+"""Local YuNet/SFace embedding worker; never stores or logs image bytes.
 
-No network requests, model downloads, image persistence, or biometric logging.
-Only outputs EMBEDDING <float...> or UNCERTAIN to stdout.
+The single-shot interface consumes KONJE1 bursts from stdin. The persistent
+server uses load_models() and extract_loaded() with the same selection rules.
 """
 import os
 import sys
-from pathlib import Path
 
 MAX_INPUT = 7 + 3 * (4 + 4 * 1024 * 1024)
 
 
 def model_paths(env=None):
-    """Require pinned model hashes and an embedding-space identifier."""
     from model_identity import verified_paths
     return verified_paths(env)
 
 
-def extract(frames, detector_path, recognizer_path):
-    """Return normalized embedding or None; every failure is a non-identification."""
+def load_models(detector_path, recognizer_path):
     import cv2
     import numpy as np
-
     if not hasattr(cv2, "FaceDetectorYN") or not hasattr(cv2, "FaceRecognizerSF"):
-        return None
+        raise RuntimeError("OpenCV face APIs unavailable")
     detector = cv2.FaceDetectorYN.create(str(detector_path), "", (320, 320), 0.9, 0.3, 5000)
     recognizer = cv2.FaceRecognizerSF.create(str(recognizer_path), "")
+    return (cv2, np, detector, recognizer)
+
+
+def extract_loaded(frames, runtime):
+    """Run a single bounded burst using preloaded models, or return uncertain."""
+    cv2, np, detector, recognizer = runtime
     candidates = []
     for raw in frames:
         image = cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_COLOR)
@@ -35,7 +37,6 @@ def extract(frames, detector_path, recognizer_path):
         detector.setInputSize((width, height))
         _, faces = detector.detect(image)
         if faces is not None and len(faces) > 1:
-            # A burst with multiple people is ambiguous; do not select another frame.
             return None
         if faces is None or len(faces) != 1:
             continue
@@ -60,9 +61,22 @@ def extract(frames, detector_path, recognizer_path):
     return embedding / magnitude
 
 
-def run(source=sys.stdin.buffer, dest=sys.stdout):
-    from worker_protocol import read_burst
+def extract(frames, detector_path, recognizer_path):
+    return extract_loaded(frames, load_models(detector_path, recognizer_path))
 
+
+def format_result(embedding):
+    if embedding is None:
+        return b"UNCERTAIN\n"
+    return ("EMBEDDING " + " ".join(format(float(v), ".9g") for v in embedding) + "\n").encode("ascii")
+
+
+def run(source=None, dest=None):
+    from worker_protocol import read_burst
+    if source is None:
+        source = sys.stdin.buffer
+    if dest is None:
+        dest = sys.stdout
     result = None
     try:
         paths = model_paths()
@@ -71,12 +85,8 @@ def run(source=sys.stdin.buffer, dest=sys.stdout):
             if len(raw) <= MAX_INPUT:
                 result = extract(read_burst(raw), *paths)
     except Exception:
-        # Do not put frame contents, identity information, or traceback on stdout.
         result = None
-    if result is None:
-        dest.write("UNCERTAIN\n")
-    else:
-        dest.write("EMBEDDING " + " ".join(format(float(v), ".9g") for v in result) + "\n")
+    dest.write(format_result(result).decode("ascii"))
     dest.flush()
     return 0
 

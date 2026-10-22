@@ -38,7 +38,8 @@ void help() {
               << "  konje list              List opaque enrolled IDs only\n"
               << "  konje run               Interactive request loop: Enter=request, c=cancel, q=quit\n"
               << "Environment: KONJE_CAMERA=none|rpicam|uvc, KONJE_SPEECH=off|on,\n"
-              << "  KONJE_WORKER_PATH=/absolute/path/to/recognition_worker.py\n";
+              << "  KONJE_WORKER_PATH=/absolute/path/to/recognition_worker.py,\n"
+              << "  KONJE_WORKER_SOCKET=/private/path/to/worker.sock (optional persistent model)\n";
 }
 std::string prompt(const std::string& label) {
     std::cout << label << ": " << std::flush;
@@ -49,7 +50,8 @@ std::string prompt(const std::string& label) {
 }
 void enroll(konje::ProfileStore& store, const std::string& id) {
     auto command = worker_command();
-    if (command.empty()) throw std::runtime_error("set KONJE_WORKER_PATH first");
+    const std::string worker_socket = getenv_or("KONJE_WORKER_SOCKET", "");
+    if (command.empty() && worker_socket.empty()) throw std::runtime_error("set KONJE_WORKER_SOCKET or KONJE_WORKER_PATH first");
     std::cout << "Only enroll a volunteer who explicitly agreed to face enrollment.\n";
     if (prompt("Type CONSENT CONFIRMED after verifying permission") != "CONSENT CONFIRMED")
         throw std::runtime_error("consent not confirmed");
@@ -68,7 +70,7 @@ void enroll(konje::ProfileStore& store, const std::string& id) {
         if (!std::getline(std::cin, line)) throw std::runtime_error("enrollment interrupted");
         auto values = konje::capture_embedding(command, [] { return true; },
                                                 getenv_or("KONJE_CAMERA", "none"),
-                                                getenv_or("KONJE_UVC_DEVICE", "/dev/video0"));
+                                                getenv_or("KONJE_UVC_DEVICE", "/dev/video0"), 1, worker_socket, p.model_id);
         if (!values || (i && values->size() != sum.size()))
             throw std::runtime_error("enrollment capture failed; no profile created");
         double norm = 0;
@@ -122,6 +124,7 @@ int main(int argc, char** argv) {
         if (action == "run" && argc == 2) {
             konje::PipelineConfig config;
             config.worker_command = worker_command();
+            config.worker_socket = getenv_or("KONJE_WORKER_SOCKET", "");
             config.policy.model_id = getenv_or("KONJE_MODEL_ID", "");
             config.speak = getenv_or("KONJE_SPEECH", "off") == "on";
             config.camera = getenv_or("KONJE_CAMERA", "none");

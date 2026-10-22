@@ -15,6 +15,7 @@ add_library(konje_core STATIC
     src/scheduler.cpp
     src/process.cpp
     src/pipeline.cpp
+    src/persistent_client.cpp
 )
 target_include_directories(konje_core PUBLIC include)
 target_link_libraries(konje_core PUBLIC OpenSSL::Crypto SQLite::SQLite3 Threads::Threads)
@@ -43,3 +44,11 @@ endif()
 # Bound the mock end-to-end run so CI cannot stall indefinitely.
 set_tests_properties(mock_full_pipeline PROPERTIES TIMEOUT 45)
 set_tests_properties(mock_active_revocation PROPERTIES TIMEOUT 45)
+
+if(BUILD_TESTING)
+    add_executable(konje_persistent_probe tests/persistent_probe.cpp)
+    target_link_libraries(konje_persistent_probe PRIVATE konje_core)
+    add_test(NAME persistent_worker_ipc
+        COMMAND ${KONJE_PYTHON3} ${CMAKE_SOURCE_DIR}/tests/persistent_integration.py $<TARGET_FILE:konje_persistent_probe>)
+    set_tests_properties(persistent_worker_ipc PROPERTIES TIMEOUT 15)
+endif()

@@ -20,7 +20,7 @@ jobs:
       - name: Validate deployment and diagnostic shell scripts
         run: bash -n scripts/setup-pi.sh scripts/validate-pi.sh scripts/bootstrap-pi.sh
       - name: Compile Python source (no model inference)
-        run: python3 -m py_compile tools/recognition_worker.py tools/worker_protocol.py tools/evaluate_policy.py tools/opencv_worker.py tools/model_preflight.py tools/model_identity.py tools/provision_models.py
+        run: python3 -m py_compile tools/recognition_worker.py tools/worker_protocol.py tools/evaluate_policy.py tools/opencv_worker.py tools/model_preflight.py tools/model_identity.py tools/provision_models.py tools/persistent_worker.py tools/benchmark_faces.py
   sanitizers:
     runs-on: ubuntu-24.04
     timeout-minutes: 12

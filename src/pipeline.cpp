@@ -1,6 +1,7 @@
 #include "konje/pipeline.hpp"
 #include "konje/policy.hpp"
 #include "konje/process.hpp"
+#include "konje/persistent_client.hpp"
 
 #include <chrono>
 #include <cmath>
@@ -27,8 +28,8 @@ std::optional<std::vector<float>> parse_worker_response(const std::string& text)
 std::optional<std::vector<float>> capture_embedding(
     const std::vector<std::string>& worker_command, const std::function<bool()>& current,
     const std::string& camera, const std::string& uvc_device,
-    int burst_frames) {
-    if (worker_command.empty() || !current()) return std::nullopt;
+    int burst_frames, const std::string& worker_socket, const std::string& model_id) {
+    if ((worker_command.empty() && worker_socket.empty()) || !current()) return std::nullopt;
     if (camera == "none" || !current()) return std::nullopt;
     if (burst_frames < 1 || burst_frames > 3) throw std::invalid_argument("burst must be 1..3 frames");
     std::vector<std::string> capture_args;
@@ -60,6 +61,11 @@ std::optional<std::vector<float>> capture_embedding(
         payload.append(captured.output);
     }
     if (!current()) return std::nullopt;
+    if (!worker_socket.empty()) {
+        const auto reply = persistent_infer(worker_socket, model_id, payload, current);
+        if (!reply || !current()) return std::nullopt;
+        return parse_worker_response(*reply);
+    }
     const auto result = run_process(worker_command, std::chrono::seconds(45), current,
                                     64 * 1024, payload);
     if (!current() || result.cancelled || result.exit_code != 0 || result.timed_out) return std::nullopt;
@@ -69,10 +75,11 @@ Pipeline::Pipeline(ProfileStore& store, PipelineConfig config)
     : store_(store), config_(std::move(config)) {}
 RequestOutcome Pipeline::execute(std::uint64_t id, const std::function<bool()>& current) {
     if (!current()) return {id, "cancelled", "superseded before capture"};
-    if (config_.worker_command.empty()) return {id, "unavailable", "inference worker not configured"};
+    if (config_.worker_command.empty() && config_.worker_socket.empty()) return {id, "unavailable", "inference worker not configured"};
     if (config_.camera == "none") return {id, "unavailable", "camera not enabled"};
     const auto embedding = capture_embedding(config_.worker_command, current,
-                                             config_.camera, config_.uvc_device, 3);
+                                             config_.camera, config_.uvc_device, 3,
+                                             config_.worker_socket, config_.policy.model_id);
     if (!current()) return {id, "cancelled", "superseded during capture or inference"};
     if (!embedding) return {id, "uncertain", "camera or single-face inference unavailable"};
     const auto profiles = store_.list(); // Fresh read; a revocation does not persist in memory as a stale cache.

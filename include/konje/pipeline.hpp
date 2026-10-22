@@ -10,6 +10,7 @@ namespace konje {
 struct PipelineConfig {
     // Worker accepts JPEG bytes on stdin, prints 'EMBEDDING f1 f2 ...' or 'UNCERTAIN'.
     std::vector<std::string> worker_command;
+    std::string worker_socket; // Optional private Unix socket: preloaded inference model.
     bool speak{false};
     std::string camera{"none"}; // none (default), rpicam, uvc
     std::string uvc_device{"/dev/video0"};
@@ -33,5 +34,6 @@ std::optional<std::vector<float>> parse_worker_response(const std::string& text)
 std::optional<std::vector<float>> capture_embedding(
     const std::vector<std::string>& worker_command, const std::function<bool()>& current,
     const std::string& camera, const std::string& uvc_device,
-    int burst_frames = 1);
+    int burst_frames = 1, const std::string& worker_socket = {},
+    const std::string& model_id = {});
 }
