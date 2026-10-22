@@ -52,6 +52,25 @@ jobs:
             --manifest "$RUNNER_TEMP/lfw/manifest.csv" \
             --out "$RUNNER_TEMP/lfw/aggregates.json"
           cat "$RUNNER_TEMP/lfw/aggregates.json"
+      - name: Compare fresh model initialization with preloaded inference
+        shell: bash
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/konje-model.env"
+          "$RUNNER_TEMP/konje-cv/bin/python" - <<'PY'
+          import csv, json, os, sys
+          from pathlib import Path
+          sys.path.insert(0, "tools")
+          from model_preflight import probe
+          manifest = Path(os.environ["RUNNER_TEMP"]) / "lfw" / "manifest.csv"
+          with manifest.open(newline="") as handle:
+              sample = next(csv.DictReader(handle))["path"]
+          report = probe(os.environ["KONJE_YUNET_MODEL"], os.environ["KONJE_SFACE_MODEL"],
+                         str((manifest.parent / sample).resolve()), iterations=5)
+          print("fresh_model_load_plus_inference:", json.dumps(report["benchmark"], sort_keys=True))
+          if report["benchmark"]["status"] != "complete":
+              raise SystemExit("cold-model comparison could not complete")
+          PY
       - name: Interpretation boundaries
         run: |
           echo "EXPLORATORY RESEARCH: No person names/images/embeddings are uploaded."
