@@ -171,11 +171,17 @@ def summarize(results, timings):
               'measurement': 'warm-preloaded-model CPU embedding + JPEG handling',
               'gallery': timings, 'development_rows': len(dev),
               'holdout_rows': sum(item['split'] == 'holdout' for item in results),
-              'policy': policy, 'holdout': {}, 'holdout_by_pose': {}}
+              'policy': policy, 'holdout': {}, 'holdout_by_pose': {},
+              'usable_embeddings_by_blur': {}}
     if policy:
         for sigma in sorted({item['sigma'] for item in results}):
             hold = [item['row'] for item in results if item['split']=='holdout' and item['sigma']==sigma]
             report['holdout'][str(sigma)] = evaluate(hold, policy['threshold'], policy['margin'])
+            hold_items = [item for item in results if item['split']=='holdout' and item['sigma']==sigma]
+            report['usable_embeddings_by_blur'][str(sigma)] = {
+                'attempts': len(hold_items),
+                'usable': sum(item['detected'] for item in hold_items),
+            }
         for pose in sorted({item['pose'] for item in results if item['split'] == 'holdout'}):
             hold = [item['row'] for item in results if item['split']=='holdout' and item['pose']==pose]
             report['holdout_by_pose'][pose] = evaluate(hold, policy['threshold'], policy['margin'])
