@@ -57,7 +57,8 @@ class WorkerTests(unittest.TestCase):
         fake_np.frombuffer.return_value = b"pixels"
         fake_cv2 = MagicMock()
         fake_cv2.IMREAD_COLOR = 1
-        image = MagicMock()\n        image.shape = (120, 120, 3)
+        image = MagicMock()
+        image.shape = (120, 120, 3)
         fake_cv2.imdecode.return_value = image
         detector = fake_cv2.FaceDetectorYN.create.return_value
         # A face row is (x, y, width, height, landmarks..., score).
