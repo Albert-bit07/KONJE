@@ -15,15 +15,27 @@ def smoke(paths, cv2, np):
     detector_path, recognition_path = paths
     if not hasattr(cv2, "FaceDetectorYN") or not hasattr(cv2, "FaceRecognizerSF"):
         raise RuntimeError("OpenCV face APIs unavailable")
-    detector = cv2.FaceDetectorYN.create(str(detector_path), "", (320, 320))
-    recognizer = cv2.FaceRecognizerSF.create(str(recognition_path), "")
+    try:
+        detector = cv2.FaceDetectorYN.create(str(detector_path), "", (320, 320))
+    except Exception as error:
+        raise RuntimeError("detector_load_" + type(error).__name__) from None
+    try:
+        recognizer = cv2.FaceRecognizerSF.create(str(recognition_path), "")
+    except Exception as error:
+        raise RuntimeError("recognizer_load_" + type(error).__name__) from None
     # Synthetic empty tensors avoid volunteer faces. Detector and embedder both execute.
     blank_frame = np.zeros((320, 320, 3), dtype=np.uint8)
     detector.setInputSize((320, 320))
-    _, detected = detector.detect(blank_frame)
+    try:
+        _, detected = detector.detect(blank_frame)
+    except Exception as error:
+        raise RuntimeError("detector_forward_" + type(error).__name__) from None
     # Detection output is not interpreted as a face; just check the execution succeeds.
     blank_aligned = np.zeros((112, 112, 3), dtype=np.uint8)
-    embedding = np.asarray(recognizer.feature(blank_aligned), dtype=np.float32).reshape(-1)
+    try:
+        embedding = np.asarray(recognizer.feature(blank_aligned), dtype=np.float32).reshape(-1)
+    except Exception as error:
+        raise RuntimeError("recognizer_forward_" + type(error).__name__) from None
     if not 64 <= embedding.size <= 2048 or not np.isfinite(embedding).all():
         raise RuntimeError("Embedding output has invalid shape or values")
     return {
@@ -47,7 +59,8 @@ def main():
         import numpy as np
         result = smoke(paths, cv2, np)
     except (ImportError, ValueError, RuntimeError) as error:
-        print(json.dumps({"result": "unavailable", "reason": type(error).__name__}))
+        reason = str(error) if isinstance(error, RuntimeError) and str(error).startswith(("detector_", "recognizer_")) else type(error).__name__
+        print(json.dumps({"result": "unavailable", "reason": reason}))
         return 2
     except Exception:
         # Do not log local model paths, image buffers or stack traces.
