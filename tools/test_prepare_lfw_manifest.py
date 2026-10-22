@@ -16,6 +16,7 @@ class LFWManifestTests(unittest.TestCase):
                 for n in range(7 if ident < 4 else 2):
                     (folder/f'photo_{n:02d}.jpg').write_bytes(b'example')
             rows=select_people(src,known=3,unknown_per_split=2)
+            self.assertEqual(rows,select_people(src,known=3,unknown_per_split=2))
             manifest=root/'private'/'manifest.csv'
             write_manifest(rows,manifest)
             parsed=load_manifest(manifest)
