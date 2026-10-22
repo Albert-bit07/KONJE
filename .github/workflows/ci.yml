@@ -40,3 +40,21 @@ jobs:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
           UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
         run: ctest --test-dir build-sanitized -R 'konje_core_tests|mock_full_pipeline' --repeat until-fail:8 --output-on-failure --timeout 45
+
+  arm64-core:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm native ARM64
+        run: test "$(uname -m)" = "aarch64"
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libssl-dev libsqlite3-dev
+      - name: Configure ARM64
+        run: cmake -S . -B build-arm64 -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Compile on ARM64
+        run: cmake --build build-arm64 --parallel 2
+      - name: Run C++ and synthetic end-to-end tests on ARM64
+        run: ctest --test-dir build-arm64 --output-on-failure --timeout 45
+      - name: Run Python unit tests on ARM64
+        run: python3 -m unittest discover -s tools -p 'test_*.py' -v
