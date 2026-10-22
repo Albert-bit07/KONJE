@@ -8,3 +8,18 @@
 - SSH worked through iPhone hotspot at hostname `konje.local`.
 
 **Important distinction:** the previous Pi compilation tested only a *minimal two-request demonstration* (`main.cpp` with a constant camera-unavailable message). The architecture here is an expanded, separate GitHub-source draft; it has NOT been built or run on the Pi. Its initial CI/host tests run on Linux x86-64 only. No camera capture, audio playback or real identity recognition has been verified.
+## Reproducible deployment-stage checks
+
+Once the private repository has been cloned to the Pi and the dependencies in `scripts/setup-pi.sh` are installed, run:
+
+```bash
+cd ~/KONJE
+bash scripts/validate-pi.sh
+bash scripts/validate-pi.sh --diagnostics
+```
+
+The first command builds the full C++20 application on the host and runs the C++ mock integration tests and Python unit tests. The second also **lists** camera/audio devices and checks local ONNX readiness without capturing images, producing speech, enrolling anyone or changing cryptographic keys. The printed "[PASS]" pertains to software tests only, **not** real-model accuracy or camera-to-speaker operation.
+
+Before real volunteer testing, separately verify the camera, speaker, appropriately licensed model weights, matching thresholds, consent and revocation process, and actual device latency. Model preflight only measures latency if explicitly passed a consented local JPEG.
+
+Privacy caveats: local AES-GCM profile encryption does not protect against theft of both the database **and** the encryption key stored on the same microSD card. Unencrypted swap, filesystem snapshots, crash dumps and backups can also undermine a claim that raw frames never reach persistent storage. An unattended deployment needs a documented key-handling threat model and privacy controls before real personal data is enrolled.
