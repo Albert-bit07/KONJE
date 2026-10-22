@@ -36,7 +36,10 @@ if(BUILD_TESTING)
                  COMMAND ${KONJE_PYTHON3} ${CMAKE_SOURCE_DIR}/tools/test_worker_protocol.py)
         add_test(NAME mock_full_pipeline
                  COMMAND ${KONJE_PYTHON3} ${CMAKE_SOURCE_DIR}/tests/mock_pipeline.py $<TARGET_FILE:konje>)
+        add_test(NAME mock_active_revocation
+                 COMMAND ${KONJE_PYTHON3} ${CMAKE_SOURCE_DIR}/tests/mock_revocation.py $<TARGET_FILE:konje>)
     endif()
 endif()
 # Bound the mock end-to-end run so CI cannot stall indefinitely.
 set_tests_properties(mock_full_pipeline PROPERTIES TIMEOUT 45)
+set_tests_properties(mock_active_revocation PROPERTIES TIMEOUT 45)
