@@ -58,10 +58,11 @@ jobs:
           set -euo pipefail
           source "$RUNNER_TEMP/konje-model.env"
           "$RUNNER_TEMP/konje-cv/bin/python" - <<'PY'
-          import csv, json, os, sys
+          import csv, json, os, sys, time, statistics
           from pathlib import Path
           sys.path.insert(0, "tools")
           from model_preflight import probe
+          from opencv_worker import load_models, extract_loaded
           manifest = Path(os.environ["RUNNER_TEMP"]) / "lfw" / "manifest.csv"
           with manifest.open(newline="") as handle:
               sample = next(csv.DictReader(handle))["path"]
@@ -70,6 +71,19 @@ jobs:
           print("fresh_model_load_plus_inference:", json.dumps(report["benchmark"], sort_keys=True))
           if report["benchmark"]["status"] != "complete":
               raise SystemExit("cold-model comparison could not complete")
+          runtime = load_models(os.environ["KONJE_YUNET_MODEL"], os.environ["KONJE_SFACE_MODEL"])
+          raw = (manifest.parent / sample).resolve().read_bytes()
+          durations = []
+          for _ in range(5):
+              started = time.perf_counter()
+              embedding = extract_loaded([raw], runtime)
+              durations.append((time.perf_counter() - started) * 1000)
+              if embedding is None:
+                  raise SystemExit("same-image preloaded inference unavailable")
+          print("preloaded_same_image:", json.dumps({
+              "runs": len(durations), "p50_ms": round(statistics.median(durations),2),
+              "max_ms": round(max(durations),2), "initialization_included": False
+          }, sort_keys=True))
           PY
       - name: Interpretation boundaries
         run: |
