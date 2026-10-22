@@ -38,3 +38,5 @@ if(BUILD_TESTING)
                  COMMAND ${KONJE_PYTHON3} ${CMAKE_SOURCE_DIR}/tests/mock_pipeline.py $<TARGET_FILE:konje>)
     endif()
 endif()
+# Bound the mock end-to-end run so CI cannot stall indefinitely.
+set_tests_properties(mock_full_pipeline PROPERTIES TIMEOUT 45)
