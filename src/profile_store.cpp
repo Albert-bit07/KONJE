@@ -59,14 +59,16 @@ std::string read_string(std::string_view data, std::size_t& cursor) {
 }
 std::string pack(const Profile& p) {
     if (p.id.empty() || p.id.size() > 128 || p.name.empty() || p.relationship.empty() ||
-        p.introduction.empty() || p.embedding.empty() || p.embedding.size() > 4096) {
+        p.introduction.empty() || p.embedding.empty() || p.embedding.size() > 4096 ||
+        p.model_id.empty() || p.model_id.size() > 128) {
         throw std::invalid_argument("invalid or incomplete consented profile");
     }
     std::string data;
-    append_u32(data, 1); // Payload schema version.
+    append_u32(data, 2); // Version 1 had no embedding model identity; never silently upgrade.
     append_string(data, p.name);
     append_string(data, p.relationship);
     append_string(data, p.introduction);
+    append_string(data, p.model_id);
     append_u32(data, static_cast<std::uint32_t>(p.embedding.size()));
     for (float value : p.embedding) {
         if (!std::isfinite(value)) throw std::invalid_argument("nonfinite embedding");
@@ -78,12 +80,14 @@ std::string pack(const Profile& p) {
 }
 Profile unpack(std::string_view data, const std::string& id) {
     std::size_t pos = 0;
-    if (read_u32(data, pos) != 1) throw std::runtime_error("unsupported profile schema");
+    if (read_u32(data, pos) != 2) throw std::runtime_error("legacy or unsupported profile schema: reenroll with explicit model ID");
     Profile p;
     p.id = id;
     p.name = read_string(data, pos);
     p.relationship = read_string(data, pos);
     p.introduction = read_string(data, pos);
+    p.model_id = read_string(data, pos);
+    if (p.model_id.empty() || p.model_id.size() > 128) throw std::runtime_error("invalid enrolled embedding model ID");
     const auto count = read_u32(data, pos);
     if (count == 0 || count > 4096 || count > (data.size() - pos) / 4) throw std::runtime_error("corrupt embedding");
     p.embedding.reserve(count);
