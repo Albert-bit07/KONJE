@@ -21,7 +21,8 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/konje-cv"
           "$RUNNER_TEMP/konje-cv/bin/python" -m pip install --disable-pip-version-check "numpy==1.26.4" "opencv-python-headless==4.10.0.84"
       - name: Download reviewed exact-checksum research models
-        run: "$RUNNER_TEMP/konje-cv/bin/python" tools/provision_models.py --download --models-dir "$RUNNER_TEMP/konje-models" --env-file "$RUNNER_TEMP/konje-model.env"
+        run: |
+          "$RUNNER_TEMP/konje-cv/bin/python" tools/provision_models.py --download --models-dir "$RUNNER_TEMP/konje-models" --env-file "$RUNNER_TEMP/konje-model.env"
       - name: Execute detector and recognizer on synthetic blank arrays
         run: |
           set -euo pipefail
