@@ -40,6 +40,9 @@ def extract(frames, detector_path, recognizer_path):
         height, width = image.shape[:2]
         detector.setInputSize((width, height))
         _, faces = detector.detect(image)
+        if faces is not None and len(faces) > 1:
+            # A burst with multiple people is ambiguous; do not select another frame.
+            return None
         if faces is None or len(faces) != 1:
             continue
         face = faces[0]
