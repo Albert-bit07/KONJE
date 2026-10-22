@@ -49,3 +49,13 @@ def verified_paths(env=None):
     except OSError:
         return None
     return paths
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Print identity for reviewed local ONNX model files")
+    parser.add_argument("detector")
+    parser.add_argument("recognizer")
+    args = parser.parse_args()
+    print("export KONJE_YUNET_SHA256=" + sha256_file(args.detector))
+    print("export KONJE_SFACE_SHA256=" + sha256_file(args.recognizer))
+    print("export KONJE_MODEL_ID=" + fingerprint(args.detector, args.recognizer))
