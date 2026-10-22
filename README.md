@@ -39,7 +39,9 @@ ctest --test-dir build --output-on-failure
 The source, model-integrity tooling, C++ application and integration tests are designed for one-time deployment on Debian 13 ARM64. They have **not** been installed on the actual Pi yet. To run the full software checks on the Pi after cloning this private repository:
 
 ```bash
-cd ~/KONJE
+# A fresh directory avoids overwriting the earlier minimal Pi demonstration.
+git clone https://github.com/Albert-bit07/KONJE.git ~/KONJE-app
+cd ~/KONJE-app
 bash scripts/bootstrap-pi.sh
 bash scripts/validate-pi.sh --diagnostics
 ```
