@@ -31,7 +31,7 @@ fi
 
 echo "=== Hardware and model diagnostics (no capture) ==="
 if [[ -r /proc/device-tree/model ]]; then
-    tr -d '\\0' < /proc/device-tree/model
+    tr -d '\000' < /proc/device-tree/model
     echo
 fi
 if command -v rpicam-hello >/dev/null 2>&1; then
