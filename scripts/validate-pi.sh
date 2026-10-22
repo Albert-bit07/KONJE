@@ -48,8 +48,9 @@ envfile="$HOME/.config/konje/model.env"
 if [[ -r "$envfile" ]]; then
     # shellcheck disable=SC1090
     source "$envfile"
-    python3 tools/model_smoke.py || echo "[FAIL] Pinned ONNX smoke check failed."
-    python3 tools/model_preflight.py || echo "[FAIL] Model preflight unavailable."
+    python3 tools/model_smoke.py || exit 3
+    python3 tools/synthetic_worker_smoke.py || exit 3
+    python3 tools/model_preflight.py || exit 3
 else
     echo "[PENDING] No pinned model environment; see docs/MODEL_PROVISIONING.md."
 fi
