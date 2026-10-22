@@ -37,7 +37,12 @@ MatchResult decide_match(const std::vector<float>& candidate,
     for (const Profile& item : enrolled) {
         if (item.id.empty() || !ids.insert(item.id).second) return {"", "ambiguous directory"};
         if (item.model_id != policy.model_id) return {"", "incompatible enrolled embedding model"};
+        // A malformed directory must not silently exclude a competing person.
+        // Otherwise a corrupted embedding can turn an ambiguous match into a match.
+        if (item.embedding.size() != candidate.size() || item.embedding.empty())
+            return {"", "invalid enrolled embedding"};
         const float score = similarity(candidate, item.embedding);
+        if (score < -1.5F) return {"", "invalid enrolled embedding"};
         if (score > best) {
             second = best;
             best = score;
