@@ -54,6 +54,16 @@ if [[ "$DOWNLOAD_MODELS" = true ]]; then
     fi
 fi
 
+envfile="$HOME/.config/konje/model.env"
+if [[ -r "$envfile" ]]; then
+    # shellcheck disable=SC1090
+    source "$envfile"
+    echo "Running pinned-model synthetic inference smoke..."
+    python3 tools/model_smoke.py
+else
+    echo "[PENDING] Verified model environment not installed; use --download-models after license review."
+fi
+
 echo "[PASS] C++ build, simulated end-to-end tests and OpenCV APIs on this host."
-echo "[NOT TESTED] Camera capture, spoken audio, model inference, calibrated face recognition."
+echo "[NOT TESTED] Real camera, audible speech, recognition accuracy and Pi-specific latency."
 echo "Next: bash scripts/validate-pi.sh --diagnostics"
