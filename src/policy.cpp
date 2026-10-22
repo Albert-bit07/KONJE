@@ -25,11 +25,11 @@ MatchResult decide_match(const std::vector<float>& candidate,
                          const std::vector<Profile>& enrolled,
                          MatchPolicy policy) {
     if (candidate.empty()) return {"", "no usable embedding"};
-    if (policy.model_id.empty()) return {"", "embedding model not configured"};
     if (!(policy.minimum_similarity >= -1.0F && policy.minimum_similarity <= 1.0F) ||
         !(policy.minimum_margin >= 0.0F && policy.minimum_margin <= 2.0F)) {
         throw std::invalid_argument("invalid recognition policy settings");
     }
+    if (policy.model_id.empty()) return {"", "embedding model not configured"};
     float best = -2.0F;
     float second = -2.0F;
     std::string best_id;
