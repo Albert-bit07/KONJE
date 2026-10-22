@@ -47,3 +47,13 @@ python3 -m unittest discover -s tools -p 'test_*.py' -v
 ```
 
 The report contains model digests, runtime API capability, and aggregate timings only. `--out` refuses to overwrite existing reports and uses owner-only permissions. Do not commit private samples, model weights, or reports containing device-specific paths. This preflight deliberately does **not** tune cosine thresholds: determining safe acceptance/margin cutoffs requires genuine positive/negative enrollment pairs, unknown faces, lighting variation, and consented ground truth. Device benchmarking and that evaluation are outstanding.
+
+## Required model integrity pins
+
+The OpenCV worker now fails closed unless `KONJE_YUNET_SHA256`, `KONJE_SFACE_SHA256`, and `KONJE_MODEL_ID` match the **exact** local model bytes and the versioned `yunet-sface-opencv-v1` preprocessing contract. To print the required values **on the deployment machine**, run:
+
+```bash
+python3 tools/model_identity.py "$KONJE_YUNET_MODEL" "$KONJE_SFACE_MODEL"
+```
+
+Review the output, then explicitly set these three environment variables for enrollment **and** inference. Replacing or modifying a model causes the worker to return `UNCERTAIN`; intentionally migrating models requires fresh enrollment and new validation. This protects against accidental mismatches, not against a malicious process that can modify both models and their environment variables. Keep these values in the device's local configuration and never put volunteers' biometrics in Git.
