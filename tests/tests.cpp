@@ -42,6 +42,20 @@ void policy_tests() {
     const konje::Profile b{"opaque_b", "Sample B", "friend", "Approved B", {0, 1, 0}, "test-model-v1"};
     const auto rule = konje::MatchPolicy{.minimum_similarity = 0.6F, .model_id = "test-model-v1", .minimum_margin = 0.10F};
     must(konje::decide_match({1, 0, 0}, {a, b}, rule).id == "opaque_a", "expected match");
+
+    auto truncated = b;
+    truncated.embedding = {0, 1};
+    must(konje::decide_match({1, 0, 0}, {a, truncated}, rule).id.empty(),
+         "mismatched competitor embedding must fail closed");
+    auto nonfinite = b;
+    nonfinite.embedding[0] = std::numeric_limits<float>::quiet_NaN();
+    must(konje::decide_match({1, 0, 0}, {a, nonfinite}, rule).id.empty(),
+         "nonfinite competitor embedding must fail closed");
+    auto zero = b;
+    zero.embedding = {0, 0, 0};
+    must(konje::decide_match({1, 0, 0}, {a, zero}, rule).id.empty(),
+         "zero competitor embedding must fail closed");
+
     auto mismatch = b;
     mismatch.model_id = "other-model";
     must(konje::decide_match({1, 0, 0}, {a, mismatch}, rule).id.empty(), "mixed embedding models must fail closed");
