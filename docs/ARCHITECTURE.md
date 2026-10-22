@@ -43,3 +43,8 @@ Only after local operations are reliable:
 - Failure tests must cover partitions, duplicate/out-of-order messages, stale ACKs, power loss around database commit/ACK, wrong keys and reconnect storms.
 
 We will not add a synchronization microservice, Kafka/Raft, Temporal or a cloud database until a real requirement justifies it. Choreo Log lessons are useful for a correct update ledger, not a reason to add a consensus cluster to this tabletop prototype.
+## Model-space compatibility (October 2026)
+
+Enrollment now requires `KONJE_MODEL_ID`, a stable identifier for the embedding model, weights and preprocessing version. Every encrypted profile carries the ID (payload schema v2); matching returns uncertain if the active policy ID is absent or any enrolled profile has a different ID. Prior schema-v1 encrypted profiles cannot be used as-is and must be re-enrolled with an explicitly identified model; never silently reinterpret them. For simulated tests, use `KONJE_MODEL_ID=mock-model-v1`.
+
+**Limitation:** The identifier is currently operator-provided, not cryptographically bound to the ONNX weights or preprocessing binary. It guards accidental backend switching only when configured correctly. Before real use, compute it from reviewed model weights plus preprocessing code/version, pin that value during enrollment and inference, and reject changes until validation and re-enrollment. Keep keys and biometric profiles off GitHub.
