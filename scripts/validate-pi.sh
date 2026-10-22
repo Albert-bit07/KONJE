@@ -44,5 +44,13 @@ if command -v aplay >/dev/null 2>&1; then
 else
     echo "[PENDING] ALSA audio listing is unavailable."
 fi
-python3 tools/model_preflight.py || echo "[PENDING] Models or runtime unavailable; see docs/OPENCV_MODEL_CANDIDATE.md."
+envfile="$HOME/.config/konje/model.env"
+if [[ -r "$envfile" ]]; then
+    # shellcheck disable=SC1090
+    source "$envfile"
+    python3 tools/model_smoke.py || echo "[FAIL] Pinned ONNX smoke check failed."
+    python3 tools/model_preflight.py || echo "[FAIL] Model preflight unavailable."
+else
+    echo "[PENDING] No pinned model environment; see docs/MODEL_PROVISIONING.md."
+fi
 echo "Camera capture, audible speech, real-model inference and calibrated face recognition require separate hands-on tests."
