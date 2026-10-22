@@ -86,9 +86,28 @@ RequestOutcome Pipeline::execute(std::uint64_t id, const std::function<bool()>& 
     for (const auto& profile : latest) {
         if (profile.id == match.id) {
             if (!current()) return {id, "cancelled", "superseded before speech"};
+            // A revocation or change to approved speech while TTS is running
+            // cancels its process. This is best-effort local enforcement, not
+            // a strict barrier across offline replicas or already-played sound.
+            const auto still_authorized = [&]() {
+                if (!current()) return false;
+                try {
+                    const auto active = store_.list();
+                    for (const auto& item : active) {
+                        if (item.id == profile.id && item.model_id == profile.model_id &&
+                            item.introduction == profile.introduction) return true;
+                    }
+                } catch (...) {
+                    // Storage/authentication errors must never authorize speech.
+                }
+                return false;
+            };
+            if (!still_authorized())
+                return {id, "uncertain", "profile revoked or updated before speech"};
             const auto spoken = run_process({"espeak-ng", "--stdin"}, std::chrono::seconds(12),
-                                            current, 4096, profile.introduction);
-            if (!current() || spoken.cancelled) return {id, "cancelled", "superseded during speech"};
+                                            still_authorized, 4096, profile.introduction);
+            if (!current()) return {id, "cancelled", "superseded during speech"};
+            if (spoken.cancelled) return {id, "uncertain", "profile revoked or changed during speech"};
             if (spoken.exit_code != 0 || spoken.timed_out) return {id, "unavailable", "speech unavailable"};
             return {id, "recognized", "approved introduction spoken"};
         }
