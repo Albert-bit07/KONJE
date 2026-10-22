@@ -65,8 +65,9 @@ def probe(detector, recognizer, image=None, iterations=3):
             outcome = extract([data], detector, recognizer)
             samples.append((time.perf_counter() - start)*1000)
             valid += outcome is not None
-        report['benchmark'] = {"status": "complete", "runs": iterations, "embeddings_generated": valid, "p50_ms": round(statistics.median(samples),2), "p95_ms": round(percentile(samples,.95),2), "max_ms": round(max(samples),2), "measurement": "cold_model_init_plus_single_jpeg_inference"}
-    except (OSError, ValueError, RuntimeError, cv2.error) as error:
+        status = "complete" if valid == iterations else ("incomplete_inference" if valid else "inference_no_embedding")
+        report['benchmark'] = {"status": status, "runs": iterations, "embeddings_generated": valid, "p50_ms": round(statistics.median(samples),2), "p95_ms": round(percentile(samples,.95),2), "max_ms": round(max(samples),2), "measurement": "cold_model_init_plus_single_jpeg_inference"}
+    except (OSError, ValueError, RuntimeError, cv2.error):
         # Fixed code only. No user path or exception strings.
         report['benchmark']['status'] = 'input_or_inference_error'
     return report
