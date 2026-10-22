@@ -108,7 +108,7 @@ void subprocess_tests() {
     const auto large = konje::run_process({"head", "-c", "262144", "/dev/zero"},
                                           5000ms, [] { return true; }, 524288);
     must(large.exit_code == 0 && !large.timed_out &&
-         large.output == std::string(262144, '\\0'), "large child output must be complete");
+         large.output == std::string(262144, '\0'), "large child output must be complete");
     const auto timed = konje::run_process({"sleep", "2"}, 40ms, [] { return true; });
     must(timed.timed_out, "timeout must kill child");
     const auto bounded = konje::run_process({"yes"}, 3000ms, [] { return true; }, 64);
