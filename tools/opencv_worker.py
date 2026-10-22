@@ -11,16 +11,10 @@ from pathlib import Path
 MAX_INPUT = 7 + 3 * (4 + 4 * 1024 * 1024)
 
 
-def model_paths(env=os.environ):
-    """Return local model paths, refusing missing/non-files and implicit downloads."""
-    detector = env.get("KONJE_YUNET_MODEL", "")
-    recognizer = env.get("KONJE_SFACE_MODEL", "")
-    if not detector or not recognizer:
-        return None
-    paths = (Path(detector), Path(recognizer))
-    if not all(p.is_file() and p.suffix.lower() == ".onnx" for p in paths):
-        return None
-    return paths
+def model_paths(env=None):
+    """Require pinned model hashes and an embedding-space identifier."""
+    from model_identity import verified_paths
+    return verified_paths(env)
 
 
 def extract(frames, detector_path, recognizer_path):
