@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 CHUNK_SIZE = 1024 * 1024
-PIPELINE_VERSION = "yunet-sface-opencv-v1"
+PIPELINE_VERSION = "yunet-sface-opencv-v2"
 
 
 def sha256_file(path):
@@ -15,10 +15,15 @@ def sha256_file(path):
     return digest.hexdigest()
 
 
+def worker_source_sha256():
+    """Bind the exact reviewed preprocessing/inference code, not just a manual label."""
+    return sha256_file(Path(__file__).with_name("opencv_worker.py"))
+
+
 def fingerprint(detector, recognizer):
-    """Bind detector and recognizer bytes plus preprocessing implementation version."""
+    """Bind exact model weights, adapter implementation and protocol version."""
     h = hashlib.sha256()
-    for part in (PIPELINE_VERSION, sha256_file(detector), sha256_file(recognizer)):
+    for part in (PIPELINE_VERSION, sha256_file(detector), sha256_file(recognizer), worker_source_sha256()):
         h.update(part.encode("ascii"))
         h.update(b"\0")
     return "opencv-sface-" + h.hexdigest()
