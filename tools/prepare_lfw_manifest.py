@@ -23,6 +23,8 @@ def select_people(dataset_root, known=12, unknown_per_split=12, seed=20261022):
         images = sorted(p.resolve() for p in folder.glob('*.jpg') if p.is_file() and not p.is_symlink())
         if images:
             groups.append((folder.name, images))
+    # Directory enumeration order is filesystem-dependent: sort before shuffling.
+    groups.sort(key=lambda row: row[0])
     rng = random.Random(seed)
     rng.shuffle(groups)
     qualified = [(identity,images) for identity,images in groups if len(images) >= 7]
