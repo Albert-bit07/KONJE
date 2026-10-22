@@ -55,6 +55,8 @@ void enroll(konje::ProfileStore& store, const std::string& id) {
         throw std::runtime_error("consent not confirmed");
     konje::Profile p;
     p.id = id;
+    p.model_id = getenv_or("KONJE_MODEL_ID", "");
+    if (p.model_id.empty() || p.model_id.size() > 128) throw std::runtime_error("set KONJE_MODEL_ID to a stable model/version identifier before enrollment");
     p.name = prompt("Approved display name");
     p.relationship = prompt("Approved relationship");
     p.introduction = prompt("Exact approved spoken introduction (no model generation)");
@@ -120,6 +122,7 @@ int main(int argc, char** argv) {
         if (action == "run" && argc == 2) {
             konje::PipelineConfig config;
             config.worker_command = worker_command();
+            config.policy.model_id = getenv_or("KONJE_MODEL_ID", "");
             config.speak = getenv_or("KONJE_SPEECH", "off") == "on";
             config.camera = getenv_or("KONJE_CAMERA", "none");
             config.uvc_device = getenv_or("KONJE_UVC_DEVICE", "/dev/video0");
