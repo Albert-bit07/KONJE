@@ -74,11 +74,11 @@ class NativePersistentTests(unittest.TestCase):
                         client.sendall(request)
                         size = struct.unpack("<I", self._read_exact(client, 4))[0]
                         self.assertLessEqual(size, 65536)
-                        self.assertEqual(self._read_exact(client, size), b"UNCERTAIN\\n")
+                        self.assertEqual(self._read_exact(client, size), b"UNCERTAIN\n")
                 self.assertEqual(calls, [])
                 healthy = subprocess.run([sys.argv[1], path, "test-model-001"],
                                          capture_output=True, text=True, timeout=6, check=True)
-                self.assertEqual(healthy.stdout, "EMBEDDING 0.6 0.8\\n")
+                self.assertEqual(healthy.stdout, "EMBEDDING 0.6 0.8\n")
                 self.assertEqual(calls, [1])
             finally:
                 stop.set()
