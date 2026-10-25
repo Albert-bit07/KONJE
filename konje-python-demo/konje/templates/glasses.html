@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KONJE Glasses</title>
+<style>
+  :root { --hud: #9fe8ff; --ok: #7dffb0; --warn: #ffd27d; --bad: #ff7d7d; --base: 1rem; }
+  body.large { --base: 1.45rem; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #05070a; color: #eef6fa; font: var(--base)/1.4 system-ui, -apple-system, Segoe UI, sans-serif; }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; }
+  header h1 { margin: 0; font-size: 1.1em; letter-spacing: .2em; color: var(--hud); }
+  header nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  .lens { position: relative; max-width: 900px; margin: 0 auto; border-radius: 28px; overflow: hidden;
+          border: 3px solid #1d2a33; box-shadow: 0 0 40px #0c3c4d55 inset; aspect-ratio: 4/3; background: #000; }
+  .lens img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(.85); }
+  .hud { position: absolute; left: 4%; right: 4%; bottom: 5%; padding: 14px 18px; border-radius: 16px;
+         background: #031118cc; border: 1px solid #9fe8ff55; backdrop-filter: blur(4px); display: none; }
+  .hud.show { display: block; }
+  .hud .name { font-size: 2em; font-weight: 700; color: var(--hud); line-height: 1.1; }
+  .hud .rel { font-size: 1.25em; }
+  .hud .extra { margin-top: 6px; opacity: .9; }
+  .hud.unknown .name { color: var(--warn); }
+  .hud.alert .name { color: var(--bad); }
+  .status { position: absolute; top: 12px; left: 16px; font-size: .8em; color: var(--hud); opacity: .8; }
+  .controls { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; padding: 16px; }
+  button { font: inherit; border: 0; border-radius: 14px; padding: .8em 1.3em; cursor: pointer; color: #001018; background: var(--hud); font-weight: 600; }
+  button.ghost { background: #16222a; color: #eef6fa; }
+  button.on { outline: 3px solid var(--ok); }
+  button.sos { background: var(--bad); color: #fff; font-size: 1.2em; }
+  a { color: var(--hud); }
+  .hint { text-align: center; opacity: .6; font-size: .85em; padding: 0 16px 24px; }
+  @media (max-width: 600px) { .lens { border-radius: 0; border-left: 0; border-right: 0; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>KONJE</h1>
+  <nav>
+    <button class="ghost" id="large">Large text</button>
+    <button class="ghost" id="mute">Sound: on</button>
+    <a href="/caregiver"><button class="ghost">Caregiver</button></a>
+  </nav>
+</header>
+
+<div class="lens">
+  <img src="/video" alt="Camera view">
+  <div class="status" id="status"></div>
+  <div class="hud" id="hud">
+    <div class="name" id="hName"></div>
+    <div class="rel" id="hRel"></div>
+    <div class="extra" id="hExtra"></div>
+  </div>
+</div>
+
+<div class="controls">
+  <button id="who">Who is this?</button>
+  <button class="ghost" id="auto">Auto: off</button>
+  <button class="ghost" id="listen">🎤 Voice: off</button>
+  <button class="sos" id="sos">EMERGENCY</button>
+</div>
+<p class="hint">Press <b>space</b> or say “Who is this?” · The display hides itself after a few seconds.</p>
+
+<script>
+const $ = id => document.getElementById(id);
+let muted = false, busy = false, autoTimer = null, lastAutoId = null, hideTimer = null;
+
+// ---- show text on the "lens" and speak it --------------------------------
+function show(name, rel, extra, kind) {
+  $("hName").textContent = name;
+  $("hRel").textContent = rel || "";
+  $("hExtra").textContent = extra || "";
+  $("hud").className = "hud show " + (kind || "");
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(() => $("hud").className = "hud", 9000);
+}
+function say(text) {
+  if (muted || !text || !window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.9;  // a little slower is easier to follow
+  speechSynthesis.speak(u);
+}
+
+// ---- "Who is this?" ------------------------------------------------------
+async function identify(fromAuto) {
+  if (busy) return;
+  busy = true;
+  $("status").textContent = "Looking…";
+  try {
+    const r = await (await fetch("/api/identify", { method: "POST" })).json();
+    if (r.status === "recognized") {
+      if (fromAuto && r.id === lastAutoId) return;   // don't repeat the same person over and over
+      lastAutoId = r.id;
+      const extra = [r.reminder, r.last].filter(Boolean).join(" · ");
+      show(r.name, "Your " + r.relationship, extra, "");
+      say(r.say);
+    } else if (!fromAuto) {
+      lastAutoId = null;
+      show(r.status === "unknown" ? "Person not recognized" : "No face found", "",
+           r.status === "unknown" ? "Stay where you are. Ask them their name." : r.say, "unknown");
+      say(r.say);
+    }
+  } catch (e) {
+    show("Connection problem", "", "KONJE isn't responding.", "alert");
+  } finally {
+    busy = false;
+    $("status").textContent = "";
+  }
+}
+$("who").onclick = () => identify(false);
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" && e.target.tagName !== "INPUT") { e.preventDefault(); identify(false); }
+});
+
+$("auto").onclick = () => {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  else { lastAutoId = null; autoTimer = setInterval(() => identify(true), 3000); }
+  $("auto").textContent = autoTimer ? "Auto: on" : "Auto: off";
+  $("auto").classList.toggle("on", !!autoTimer);
+};
+
+// ---- emergency -----------------------------------------------------------
+$("sos").onclick = async () => {
+  show("Calling for help…", "", "", "alert");
+  say("Calling for help.");
+  const r = await (await fetch("/api/emergency", { method: "POST" })).json();
+  show(r.sent ? "Help is on the way" : "Alert not sent", "", r.info, r.sent ? "" : "alert");
+  say(r.sent ? "Your caregiver has been told. Help is on the way." : "The alert could not be sent.");
+};
+
+// ---- voice command (works in Chrome and Edge; Safari support varies) ---------
+const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+$("listen").onclick = () => {
+  if (!Rec) { show("Voice not supported", "", "Use Chrome, or the button.", "unknown"); return; }
+  if (rec) { rec.onend = null; rec.stop(); rec = null; $("listen").textContent = "🎤 Voice: off"; $("listen").classList.remove("on"); return; }
+  rec = new Rec(); rec.continuous = true; rec.lang = "en-US";
+  rec.onresult = e => {
+    const heard = e.results[e.results.length - 1][0].transcript.toLowerCase();
+    if (/who('?s| is) (this|that)/.test(heard)) identify(false);
+  };
+  rec.onend = () => rec && rec.start();  // keep listening
+  rec.start();
+  $("listen").textContent = "🎤 Voice: on"; $("listen").classList.add("on");
+};
+
+// ---- reminders: ask the server every 30 seconds if one is due ---------------
+setInterval(async () => {
+  const due = await (await fetch("/api/due")).json();
+  for (const r of due) { show("Reminder", r.time, r.text, ""); say("Reminder. " + r.text); }
+}, 30000);
+
+// ---- accessibility settings, remembered in this browser ---------------------------
+function load(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function keep(k, v) { try { localStorage.setItem(k, v); } catch {} }
+if (load("large") === "1") document.body.classList.add("large");
+if (load("muted") === "1") { muted = true; $("mute").textContent = "Sound: off"; }
+$("large").onclick = () => keep("large", document.body.classList.toggle("large") ? "1" : "0");
+$("mute").onclick = () => { muted = !muted; keep("muted", muted ? "1" : "0"); $("mute").textContent = muted ? "Sound: off" : "Sound: on"; };
+</script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KONJE Caregiver</title>
+<style>
+  :root { --bg: #f5f3ee; --card: #fff; --ink: #1d2327; --muted: #5d676d; --line: #e2ddd3; --accent: #0b6e85; --bad: #b3261e; --ok: #1e7b45; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111518; --card: #1a2024; --ink: #e8eef1; --muted: #9aa6ad; --line: #2b343a; --accent: #5fc3dc; --bad: #ff8a80; --ok: #7ddca0; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 16px; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  h1 { margin: 8px 0; font-size: 1.5rem; } h2 { margin: 0 0 12px; font-size: 1.15rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 16px; }
+  label { display: block; font-size: .9rem; color: var(--muted); margin: 10px 0 4px; }
+  input[type=text], input[type=time] { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; font: inherit; background: var(--bg); color: var(--ink); }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0 4px; color: var(--ink); font-size: .95rem; }
+  .check input { margin-top: 4px; width: 18px; height: 18px; }
+  button { font: inherit; border: 0; border-radius: 9px; padding: 9px 14px; cursor: pointer; background: var(--accent); color: #fff; font-weight: 600; }
+  button.small { padding: 5px 10px; font-size: .85rem; } button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+  button.danger { background: transparent; color: var(--bad); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: wait; }
+  .row { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; } .row > div { flex: 1; min-width: 120px; }
+  .msg { margin-top: 10px; font-size: .95rem; min-height: 1.4em; } .msg.bad { color: var(--bad); } .msg.ok { color: var(--ok); }
+  .person { border-top: 1px solid var(--line); padding: 12px 0; } .person:first-of-type { border-top: 0; }
+  .person b { font-size: 1.05rem; } .meta { color: var(--muted); font-size: .85rem; }
+  ul { margin: 6px 0 0; padding-left: 18px; } .log li { font-size: .9rem; } .log .t { color: var(--muted); }
+  .preview { width: 100%; border-radius: 10px; margin-bottom: 8px; aspect-ratio: 4/3; object-fit: cover; background: #000; }
+  a { color: var(--accent); } code { background: var(--bg); padding: 1px 5px; border-radius: 5px; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>KONJE · Caregiver</h1>
+  <a href="/">← Back to glasses view</a>
+</header>
+
+<div class="grid">
+  <section>
+    <h2>Enroll a trusted person</h2>
+    <img class="preview" src="/video" alt="Camera view">
+    <label>Name</label><input type="text" id="name" placeholder="Amanda">
+    <label>Relationship to the wearer</label><input type="text" id="rel" placeholder="daughter">
+    <label>What the glasses should say (optional)</label><input type="text" id="intro" placeholder="This is Amanda, your daughter.">
+    <label>Reminder to add (optional)</label><input type="text" id="reminder" placeholder="She is taking you to your appointment today.">
+    <div class="check"><input type="checkbox" id="consent"><span>This person agreed to have their face stored on this device, and knows they can be removed at any time.</span></div>
+    <label>Consent given by</label><input type="text" id="consentBy" placeholder="Amanda, in person">
+    <p class="meta">When you press Enroll, only this person should face the camera for about 4 seconds. Turn the head slightly.</p>
+    <button id="enroll">Enroll</button>
+    <div class="msg" id="enrollMsg"></div>
+  </section>
+
+  <section>
+    <h2>Trusted people</h2>
+    <div id="people"><p class="meta">Nobody enrolled yet.</p></div>
+  </section>
+</div>
+
+<div class="grid">
+  <section>
+    <h2>Medication &amp; appointment reminders</h2>
+    <div class="row">
+      <div><label>Time</label><input type="time" id="rTime"></div>
+      <div style="flex:2"><label>Reminder</label><input type="text" id="rText" placeholder="Take your blue pill with water"></div>
+      <button id="addR">Add</button>
+    </div>
+    <ul id="reminders"></ul>
+    <p class="meta">Reminders are shown and spoken on the glasses view once a day at the set time.</p>
+  </section>
+
+  <section>
+    <h2>Emergency alerts to your phone</h2>
+    <p class="meta">1. Install the free <b>ntfy</b> app on the caregiver's phone.<br>
+      2. In the app, subscribe to a hard-to-guess topic name, e.g. <code>konje-amanda-7381</code>.<br>
+      3. Type the same name here and press Save, then Test.</p>
+    <div class="row">
+      <div><label>Alert topic</label><input type="text" id="topic"></div>
+      <button id="saveTopic">Save</button><button class="ghost" id="test">Test</button>
+    </div>
+    <div class="msg" id="alertMsg"></div>
+  </section>
+</div>
+
+<section>
+  <h2>Activity</h2>
+  <ul class="log" id="log"></ul>
+</section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const api = async (url, method = "GET", body) => {
+  const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body && JSON.stringify(body) });
+  return r.json();
+};
+const when = t => t ? t.replace("T", " ").slice(0, 16) : "never";
+function msg(id, text, ok) { $(id).textContent = text; $(id).className = "msg " + (ok ? "ok" : "bad"); }
+
+// ---- enrollment ----
+$("enroll").onclick = async () => {
+  $("enroll").disabled = true;
+  msg("enrollMsg", "Looking at the camera… hold still.", true);
+  const r = await api("/api/enroll", "POST", {
+    name: $("name").value, relationship: $("rel").value, intro: $("intro").value,
+    reminder: $("reminder").value, consent: $("consent").checked, consent_by: $("consentBy").value });
+  $("enroll").disabled = false;
+  if (r.ok) {
+    msg("enrollMsg", `Enrolled ${$("name").value} using ${r.photos} pictures.`, true);
+    for (const id of ["name", "rel", "intro", "reminder", "consentBy"]) $(id).value = "";
+    $("consent").checked = false;
+    refresh();
+  } else msg("enrollMsg", r.error, false);
+};
+
+// ---- people list ----
+async function loadPeople() {
+  const people = await api("/api/people");
+  if (!people.length) { $("people").innerHTML = '<p class="meta">Nobody enrolled yet.</p>'; return; }
+  $("people").innerHTML = people.map(p => `
+    <div class="person">
+      <b>${esc(p.name)}</b> · ${esc(p.relationship)}
+      <div class="meta">Consent: ${esc(p.consent.given_by)} on ${when(p.consent.at)} · Last recognized: ${when(p.last_seen)}</div>
+      ${p.reminder ? `<div class="meta">Reminder: ${esc(p.reminder)}</div>` : ""}
+      <ul>${p.interactions.slice(-3).reverse().map(i => `<li class="meta">${when(i.at)}: ${esc(i.note)}</li>`).join("")}</ul>
+      <div class="row" style="margin-top:8px">
+        <button class="small ghost" data-note="${p.id}">Add visit note</button>
+        <button class="small ghost" data-rem="${p.id}">Change reminder</button>
+        <button class="small danger" data-del="${p.id}" data-name="${esc(p.name)}">Remove</button>
+      </div>
+    </div>`).join("");
+}
+$("people").onclick = async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.note) {
+    const note = prompt("What happened on this visit? (e.g. \"Brought flowers on Sunday\")");
+    if (note) await api(`/api/people/${b.dataset.note}/interaction`, "POST", { note });
+  } else if (b.dataset.rem) {
+    const reminder = prompt("New reminder (leave empty to clear):");
+    if (reminder !== null) await api(`/api/people/${b.dataset.rem}`, "PATCH", { reminder });
+  } else if (b.dataset.del) {
+    if (confirm(`Remove ${b.dataset.name}? Their face data will be deleted.`)) await api(`/api/people/${b.dataset.del}`, "DELETE");
+  }
+  refresh();
+};
+
+// ---- reminders ----
+async function loadReminders() {
+  const rs = (await api("/api/reminders")).sort((a, b) => a.time.localeCompare(b.time));
+  $("reminders").innerHTML = rs.map(r => `<li>${esc(r.time)} · ${esc(r.text)} <button class="small danger" data-r="${r.id}">×</button></li>`).join("");
+}
+$("addR").onclick = async () => {
+  await api("/api/reminders", "POST", { time: $("rTime").value, text: $("rText").value });
+  $("rText").value = ""; refresh();
+};
+$("reminders").onclick = async e => {
+  const b = e.target.closest("button[data-r]"); if (!b) return;
+  await api(`/api/reminders/${b.dataset.r}`, "DELETE"); refresh();
+};
+
+// ---- alerts ----
+$("saveTopic").onclick = async () => { await api("/api/settings", "POST", { alert_topic: $("topic").value }); msg("alertMsg", "Saved.", true); };
+$("test").onclick = async () => { const r = await api("/api/test-alert", "POST"); msg("alertMsg", r.info, r.sent); };
+
+// ---- activity log ----
+async function loadLog() {
+  const ev = await api("/api/events");
+  $("log").innerHTML = ev.map(e => `<li><span class="t">${when(e.at)}</span> ${esc(e.text)}</li>`).join("") || '<li class="meta">Nothing yet.</li>';
+}
+
+function refresh() { loadPeople(); loadReminders(); loadLog(); }
+api("/api/settings").then(s => $("topic").value = s.alert_topic || "");
+refresh();
+setInterval(loadLog, 10000);
+</script>
+</body>
+</html>
